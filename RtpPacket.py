@@ -20,22 +20,22 @@ class RtpPacket:
 
         # header[0] = ...
         # ...
-        header[0] = header[0] | V << 6
-        header[0] = header[0] | P << 5
-        header[0] = header[0] | X << 4
-        header[0] = header[0] | CC
-        header[1] = header[1] | M << 7
-        header[1] = header[1] | PT
-        header[2] = (seqNum >> 8) & 0xFF
-        header[3] = seqNum & 0xFF
+        header[0] = header[0] | version << 6
+        header[0] = header[0] | padding << 5
+        header[0] = header[0] | extension << 4
+        header[0] = header[0] | cc
+        header[1] = header[1] | marker << 7
+        header[1] = header[1] | pt
+        header[2] = (seqnum >> 8) & 0xFF
+        header[3] = seqnum & 0xFF
         header[4] = (timestamp >> 24) & 0xFF
         header[5] = (timestamp >> 16) & 0xFF
         header[6] = (timestamp >> 8) & 0xFF
         header[7] = timestamp & 0xFF
-        header[8] = (SSRC >> 24) & 0xFF
-        header[9] = (SSRC >> 16) & 0xFF
-        header[10] = (SSRC >> 8) & 0xFF
-        header[11] = SSRC & 0xFF
+        header[8] = (ssrc >> 24) & 0xFF
+        header[9] = (ssrc >> 16) & 0xFF
+        header[10] = (ssrc >> 8) & 0xFF
+        header[11] = ssrc & 0xFF
         self.header = header
 
         # Get the payload from the argument
