@@ -13,6 +13,8 @@ class ServerWorker:
     PLAY = 'PLAY'
     PAUSE = 'PAUSE'
     TEARDOWN = 'TEARDOWN'
+    PREVIOUS = 'PREVIOUS'
+    NEXT = 'NEXT'
 
     INIT = 0
     READY = 1
@@ -116,6 +118,48 @@ class ServerWorker:
 
             # Close the RTP socket
             self.clientInfo['rtpSocket'].close()
+
+        # Process PREVIOUS request
+        elif requestType == self.PREVIOUS:
+            print("processing PREVIOUS\n")
+
+            self.clientInfo['videoStream'].setFrame(-10)
+            data = self.clientInfo['videoStream'].nextFrame()
+            if data:
+                frameNumber = self.clientInfo['videoStream'].frameNbr()
+                try:
+                    address = self.clientInfo['rtspSocket'][1][0]
+                    # print(list(self.clientInfo))
+                    port = int(self.clientInfo['rtpPort'])
+                    self.clientInfo['rtpSocket'].sendto(
+                        self.makeRtp(data, frameNumber), (address, port))
+                except:
+                    print("Connection Error")
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+            self.replyRtsp(self.OK_200, seq[1])
+
+        # Process NEXT request
+        elif requestType == self.NEXT:
+            print("processing NEXT\n")
+
+            self.clientInfo['videoStream'].setFrame(10)
+            data = self.clientInfo['videoStream'].nextFrame()
+            if data:
+                frameNumber = self.clientInfo['videoStream'].frameNbr()
+                try:
+                    address = self.clientInfo['rtspSocket'][1][0]
+                    # print(list(self.clientInfo))
+                    port = int(self.clientInfo['rtpPort'])
+                    self.clientInfo['rtpSocket'].sendto(
+                        self.makeRtp(data, frameNumber), (address, port))
+                except:
+                    print("Connection Error")
+                    print('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print('-'*60)
+            self.replyRtsp(self.OK_200, seq[1])
 
     def sendRtp(self):
         """Send RTP packets over UDP."""

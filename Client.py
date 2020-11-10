@@ -24,6 +24,8 @@ class Client:
     PLAY = 1
     PAUSE = 2
     TEARDOWN = 3
+    NEXT = 4
+    PREVIOUS = 5
 
     RTSP_VERSION = 'RTSP/1.0'
     TRANSPORT = 'RTP/UDP'
@@ -50,25 +52,25 @@ class Client:
         self.setup = Button(self.master, width=20, padx=3, pady=3)
         self.setup["text"] = "Setup"
         self.setup["command"] = self.setupMovie
-        self.setup.grid(row=2, column=0, padx=2, pady=2)
+        self.setup.grid(row=3, column=0, padx=2, pady=2)
 
         # Create Play button
         self.start = Button(self.master, width=20, padx=3, pady=3)
         self.start["text"] = "Play"
         self.start["command"] = self.playMovie
-        self.start.grid(row=2, column=1, padx=2, pady=2)
+        self.start.grid(row=3, column=1, padx=2, pady=2)
 
         # Create Pause button
         self.pause = Button(self.master, width=20, padx=3, pady=3)
         self.pause["text"] = "Pause"
         self.pause["command"] = self.pauseMovie
-        self.pause.grid(row=2, column=2, padx=2, pady=2)
+        self.pause.grid(row=3, column=2, padx=2, pady=2)
 
         # Create Teardown button
         self.teardown = Button(self.master, width=20, padx=3, pady=3)
         self.teardown["text"] = "Teardown"
         self.teardown["command"] = self.exitClient
-        self.teardown.grid(row=2, column=3, padx=2, pady=2)
+        self.teardown.grid(row=3, column=3, padx=2, pady=2)
 
         # Create a label to display the movie
         self.label = Label(self.master, height=19)
@@ -80,6 +82,18 @@ class Client:
             self.master, orient='horizontal', length=286, mode='determinate')
         self.progressbar.grid(row=1, column=0, columnspan=4,
                               sticky=W+E+N+S, padx=5, pady=5)
+
+        # Create Previous button
+        self.start = Button(self.master, width=20, padx=3, pady=3)
+        self.start["text"] = "<<"
+        self.start["command"] = self.jumbPrev
+        self.start.grid(row=2, column=1, padx=2, pady=2)
+
+        # Create Next button
+        self.pause = Button(self.master, width=20, padx=3, pady=3)
+        self.pause["text"] = ">>"
+        self.pause["command"] = self.jumbNext
+        self.pause.grid(row=2, column=2, padx=2, pady=2)
 
     def setupMovie(self):
         """Setup button handler."""
@@ -97,6 +111,37 @@ class Client:
         """Pause button handler."""
         if self.state == self.PLAYING:
             self.sendRtspRequest(self.PAUSE)
+
+    def jumbPrev(self):
+        self.sendRtspRequest(self.PREVIOUS)
+        data = self.rtpSocket.recv(20480)
+        if data:
+            rtpPacket = RtpPacket()
+            rtpPacket.decode(data)
+
+            currFrameNbr = rtpPacket.seqNum()
+            print("Current Seq Num: " + str(currFrameNbr))
+
+            # if currFrameNbr > self.frameNbr:  # Discard the late packet
+            self.frameNbr = currFrameNbr
+            self.updateMovie(self.writeFrame(
+                rtpPacket.getPayload()))
+
+    def jumbNext(self):
+
+        self.sendRtspRequest(self.NEXT)
+        data = self.rtpSocket.recv(20480)
+        if data:
+            rtpPacket = RtpPacket()
+            rtpPacket.decode(data)
+
+            currFrameNbr = rtpPacket.seqNum()
+            print("Current Seq Num: " + str(currFrameNbr))
+
+            # if currFrameNbr > self.frameNbr:  # Discard the late packet
+            self.frameNbr = currFrameNbr
+            self.updateMovie(self.writeFrame(
+                rtpPacket.getPayload()))
 
     def playMovie(self):
         """Play button handler."""
@@ -119,10 +164,10 @@ class Client:
                     currFrameNbr = rtpPacket.seqNum()
                     print("Current Seq Num: " + str(currFrameNbr))
 
-                    if currFrameNbr > self.frameNbr:  # Discard the late packet
-                        self.frameNbr = currFrameNbr
-                        self.updateMovie(self.writeFrame(
-                            rtpPacket.getPayload()))
+                    # if currFrameNbr > self.frameNbr:  # Discard the late packet
+                    self.frameNbr = currFrameNbr
+                    self.updateMovie(self.writeFrame(
+                        rtpPacket.getPayload()))
             except:
                 # Stop listening upon requesting PAUSE or TEARDOWN
                 if self.playEvent.isSet():
@@ -214,6 +259,16 @@ class Client:
             # Keep track of the sent request.
             # self.requestSent = ...
             self.requestSent = self.TEARDOWN
+
+        elif requestCode == self.PREVIOUS:
+            self.rtspSeq = self.rtspSeq + 1
+            request = f'PREVIOUS {self.fileName} {self.RTSP_VERSION}\nCSeq: {self.rtspSeq}\nSession: {self.sessionId}'
+            # self.requestSent = self.PREVIOUS
+
+        elif requestCode == self.NEXT:
+            self.rtspSeq = self.rtspSeq + 1
+            request = f'NEXT {self.fileName} {self.RTSP_VERSION}\nCSeq: {self.rtspSeq}\nSession: {self.sessionId}'
+            # self.requestSent = self.NEXT
 
         else:
             return
