@@ -68,6 +68,10 @@ class ServerWorker:
                 # Generate a randomized RTSP session ID
                 self.clientInfo['session'] = randint(100000, 999999)
 
+                # Send the total frame of movie
+                self.clientInfo['totalframe'] = self.clientInfo['videoStream'].totalFrame(
+                )
+
                 # Send RTSP reply
                 self.replyRtsp(self.OK_200, seq[1])
 
@@ -160,7 +164,9 @@ class ServerWorker:
         if code == self.OK_200:
             #print("200 OK")
             reply = 'RTSP/1.0 200 OK\nCSeq: ' + seq + \
-                '\nSession: ' + str(self.clientInfo['session'])
+                '\nSession: ' + \
+                str(self.clientInfo['session'])+'\nTotalframe: ' + \
+                str(self.clientInfo['totalframe'])
             connSocket = self.clientInfo['rtspSocket'][0]
             connSocket.send(reply.encode())
 

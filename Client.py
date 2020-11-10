@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 from PIL import Image, ImageTk
 import socket
 import threading
@@ -24,7 +25,7 @@ class Client:
     PAUSE = 2
     TEARDOWN = 3
 
-    RTSP_VERSION = 'RTSP/2.0'
+    RTSP_VERSION = 'RTSP/1.0'
     TRANSPORT = 'RTP/UDP'
 
     # Initiation..
@@ -49,30 +50,36 @@ class Client:
         self.setup = Button(self.master, width=20, padx=3, pady=3)
         self.setup["text"] = "Setup"
         self.setup["command"] = self.setupMovie
-        self.setup.grid(row=1, column=0, padx=2, pady=2)
+        self.setup.grid(row=2, column=0, padx=2, pady=2)
 
         # Create Play button
         self.start = Button(self.master, width=20, padx=3, pady=3)
         self.start["text"] = "Play"
         self.start["command"] = self.playMovie
-        self.start.grid(row=1, column=1, padx=2, pady=2)
+        self.start.grid(row=2, column=1, padx=2, pady=2)
 
         # Create Pause button
         self.pause = Button(self.master, width=20, padx=3, pady=3)
         self.pause["text"] = "Pause"
         self.pause["command"] = self.pauseMovie
-        self.pause.grid(row=1, column=2, padx=2, pady=2)
+        self.pause.grid(row=2, column=2, padx=2, pady=2)
 
         # Create Teardown button
         self.teardown = Button(self.master, width=20, padx=3, pady=3)
         self.teardown["text"] = "Teardown"
         self.teardown["command"] = self.exitClient
-        self.teardown.grid(row=1, column=3, padx=2, pady=2)
+        self.teardown.grid(row=2, column=3, padx=2, pady=2)
 
         # Create a label to display the movie
         self.label = Label(self.master, height=19)
         self.label.grid(row=0, column=0, columnspan=4,
                         sticky=W+E+N+S, padx=5, pady=5)
+
+        # Create progress bar
+        self.progressbar = ttk.Progressbar(
+            self.master, orient='horizontal', length=286, mode='determinate')
+        self.progressbar.grid(row=1, column=0, columnspan=4,
+                              sticky=W+E+N+S, padx=5, pady=5)
 
     def setupMovie(self):
         """Setup button handler."""
@@ -104,7 +111,7 @@ class Client:
         """Listen for RTP packets."""
         while True:
             try:
-                data = self.rtpSocket.recv(40960)
+                data = self.rtpSocket.recv(20480)
                 if data:
                     rtpPacket = RtpPacket()
                     rtpPacket.decode(data)
@@ -142,6 +149,7 @@ class Client:
         photo = ImageTk.PhotoImage(Image.open(imageFile))
         self.label.configure(image=photo, height=288)
         self.label.image = photo
+        self.progressbar['value'] = self.frameNbr
 
     def connectToServer(self):
         """Connect to the Server. Start a new RTSP/TCP session."""
@@ -238,6 +246,7 @@ class Client:
         # Process only if the server reply's sequence number is the same as the request's
         if seqNum == self.rtspSeq:
             session = int(lines[2].split(' ')[1])
+            totalFrame = int(lines[3].split(' ')[1])
             # New RTSP session ID
             if self.sessionId == 0:
                 self.sessionId = session
@@ -252,7 +261,7 @@ class Client:
                         # Update RTSP state.
                         # self.state = ...
                         self.state = self.READY
-
+                        self.progressbar['maximum'] = totalFrame
                         # Open RTP port.
                         self.openRtpPort()
                     elif self.requestSent == self.PLAY:
