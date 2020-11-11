@@ -15,6 +15,8 @@ class ServerWorker:
     TEARDOWN = 'TEARDOWN'
     PREVIOUS = 'PREVIOUS'
     NEXT = 'NEXT'
+    STOP = 'STOP'
+    DESCRIBE = 'DESCRIBE'
 
     INIT = 0
     READY = 1
@@ -56,7 +58,7 @@ class ServerWorker:
         seq = request[1].split(' ')
 
         # Process SETUP request
-        if requestType == self.SETUP:
+        if requestType == self.SETUP :
             if self.state == self.INIT:
                 # Update state
                 print("processing SETUP\n")
@@ -71,8 +73,7 @@ class ServerWorker:
                 self.clientInfo['session'] = randint(100000, 999999)
 
                 # Send the total frame of movie
-                self.clientInfo['totalframe'] = self.clientInfo['videoStream'].totalFrame(
-                )
+                self.clientInfo['totalframe'] = self.clientInfo['videoStream'].getTotalFrameCount()
 
                 # Send RTSP reply
                 self.replyRtsp(self.OK_200, seq[1])
@@ -119,6 +120,17 @@ class ServerWorker:
             # Close the RTP socket
             self.clientInfo['rtpSocket'].close()
 
+        elif requestType == self.STOP:
+            print("processing STOP\n")
+            self.state = self.INIT
+
+            self.clientInfo['event'].set()
+
+            self.replyRtsp(self.OK_200, seq[1])
+
+            # Close the RTP socket
+            self.clientInfo['rtpSocket'].close()
+
         # Process PREVIOUS request
         elif requestType == self.PREVIOUS:
             print("processing PREVIOUS\n")
@@ -139,6 +151,8 @@ class ServerWorker:
                     traceback.print_exc(file=sys.stdout)
                     print('-'*60)
             self.replyRtsp(self.OK_200, seq[1])
+
+        
 
         # Process NEXT request
         elif requestType == self.NEXT:
@@ -161,6 +175,13 @@ class ServerWorker:
                     print('-'*60)
             self.replyRtsp(self.OK_200, seq[1])
 
+        elif requestType == self.DESCRIBE:
+            # if 
+            print("processing DESCRIBE\n")
+            self.replyRtsp(self.OK_200, seq[1])
+
+        
+
     def sendRtp(self):
         """Send RTP packets over UDP."""
         while True:
@@ -169,16 +190,19 @@ class ServerWorker:
             # Stop sending if request is PAUSE or TEARDOWN
             if self.clientInfo['event'].isSet():
                 break
-
-            data = self.clientInfo['videoStream'].nextFrame()
+            try:
+                data = self.clientInfo['videoStream'].nextFrame()
+            except:
+                pass
             if data:
                 frameNumber = self.clientInfo['videoStream'].frameNbr()
                 try:
                     address = self.clientInfo['rtspSocket'][1][0]
-                    # print(list(self.clientInfo))
                     port = int(self.clientInfo['rtpPort'])
                     self.clientInfo['rtpSocket'].sendto(
                         self.makeRtp(data, frameNumber), (address, port))
+                    if frameNumber== self.clientInfo['videoStream'].getTotalFrameCount():
+                        break
                 except:
                     print("Connection Error")
                     print('-'*60)

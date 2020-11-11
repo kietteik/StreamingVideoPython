@@ -3,6 +3,7 @@ class VideoStream:
         self.frameDict = {}
         self.currFrame = 0
         self.filename = filename
+        self.totalFrameCount = self.totalFrame()
         try:
             self.file = open(filename, 'rb')
         except:
@@ -42,6 +43,12 @@ class VideoStream:
                 length = file.read(5)
                 self.frameDict[frameCount] = data
         return frameCount
+    def getTotalFrameCount(self):
+        return self.totalFrameCount
 
     def setFrame(self, frame):
         self.currFrame += frame
+        if self.currFrame<0:
+            self.currFrame=0
+        elif self.currFrame>=self.totalFrameCount:
+            self.currFrame=self.totalFrameCount-1

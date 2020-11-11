@@ -17,5 +17,5 @@ python ClientLauncher.py '' 5050 4040 movie.Mjpeg
 ## Maybe needed (change maximum UDP datagram receive [client OS])
 
 ```
-sudo sysctl -w net.inet.udp.maxdgram=65535
+sudo sysctl -w net.inet.udp.maxdgram=20480
 ```
